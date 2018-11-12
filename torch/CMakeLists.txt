@@ -279,7 +279,8 @@ if(MSVC)
 
   target_compile_options(torch PRIVATE
     ${MSVC_RUNTIME_LIBRARY_OPTION}
-    /Z7
+    # BugBug /Z7
+    /Zi
     # BugBug /EHa
     /EHsc # BugBug
     /DNOMINMAX

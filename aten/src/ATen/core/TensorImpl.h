@@ -1495,9 +1495,19 @@ protected:
 //    data type pointer
 //    miscellaneous bitfield
 //
+#if (defined _MSC_VER && (!defined NDEBUG || NDEBUG==0 || defined _DEBUG))
+
+// TODO: This value is different for MSVC debug builds. In the future, we should investigate where
+//       this difference is coming from.
+static_assert(sizeof(void*) != sizeof(int64_t) || // if 64-bit...
+              sizeof(TensorImpl) == sizeof(int64_t) * 13,
+              "You changed the size of TensorImpl on 64-bit arch."
+              "See Note [TensorImpl size constraints] on how to proceed.");
+#else
 static_assert(sizeof(void*) != sizeof(int64_t) || // if 64-bit...
               sizeof(TensorImpl) == sizeof(int64_t) * 12,
               "You changed the size of TensorImpl on 64-bit arch."
               "See Note [TensorImpl size constraints] on how to proceed.");
+#endif
 
 } // namespace at

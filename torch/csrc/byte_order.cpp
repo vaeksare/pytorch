@@ -44,14 +44,15 @@ static inline void swapBytes64(void *ptr)
 {
   uint64_t output;
   memcpy(&output, ptr, sizeof(uint64_t));
-#if defined(_MSC_VER) && !defined(_DEBUG)
+#if defined(_MSC_VER)
   output = _byteswap_uint64(output);
 #elif defined(__llvm__) || defined(__GNUC__) && !defined(__ICC)
   output = __builtin_bswap64(output);
 #else
-   uint64_t Hi = SwapByteOrder_32(uint32_t(value));
-   uint32_t Lo = SwapByteOrder_32(uint32_t(value >> 32));
-   return (Hi << 32) | Lo;
+#error "Compiler not supported"
+   // BugBug uint64_t Hi = SwapByteOrder_32(uint32_t(value));
+   // BugBug uint32_t Lo = SwapByteOrder_32(uint32_t(value >> 32));
+   // BugBug return (Hi << 32) | Lo;
 #endif
   memcpy(ptr, &output, sizeof(uint64_t));
 }
