@@ -17,7 +17,7 @@ from torch._six import inf, nan
 from test_torch import _TestTorchMixin
 
 from common_utils import TestCase, get_gpu_type, to_gpu, freeze_rng_state, run_tests, \
-    PY3, IS_WINDOWS, NO_MULTIPROCESSING_SPAWN, skipIfRocm, TEST_WITH_ROCM, load_tests
+    PY3, IS_WINDOWS, NO_MULTIPROCESSING_SPAWN, skipIfRocm, TEST_NUMPY, TEST_WITH_ROCM, load_tests
 
 # load_tests from common_utils is used to automatically filter tests for
 # sharding on sandcastle. This line silences flake warnings
@@ -829,6 +829,17 @@ class TestCuda(TestCase):
                 end1 = advance(gen1, end1)
                 t += 1
 
+    @skipIfRocm
+    def test_out_of_memory(self):
+        tensor = torch.zeros(1024, device='cuda')
+
+        with self.assertRaisesRegex(RuntimeError, "Tried to allocate 80.00 GiB"):
+            torch.randn(1024 * 1024 * 1024 * 80, dtype=torch.int8, device='cuda')
+
+        # ensure out of memory error doesn't disturb subsequent kernel
+        tensor.fill_(1)
+        self.assertTrue((tensor == 1).all())
+
     @unittest.skipIf(not TEST_MULTIGPU, "only one GPU detected")
     @skipIfRocm
     def test_autogpu(self):
@@ -1008,6 +1019,19 @@ class TestCuda(TestCase):
             self.assertEqual(bt.get_device(), bct.get_device())
             self.assertIsInstance(bct, type(bt))
 
+        # check that tensors on device[0] are returned as-is
+        for out_tensors in (b_tensors, bc_tensors_t):
+            for inp_t, (out_t, _) in zip(tensors, out_tensors):
+                self.assertIs(inp_t, out_t)
+
+        # check that the tensors not on device[0] have different version counters
+        # NOTE [ Version Counter in comm.*_coalesced ]
+        versions = [t._version for _, t in bc_tensors_t]
+        for old_version, (_, t) in zip(versions, bc_tensors_t):
+            self.assertEqual(t._version, old_version)
+            t.zero_()
+            self.assertEqual(t._version, old_version + 1)
+
     @unittest.skipIf(not TEST_MULTIGPU, "only one GPU detected")
     @skipIfRocm
     def test_broadcast_coalesced(self):
@@ -1070,6 +1094,15 @@ class TestCuda(TestCase):
         for r, rc in zip(r_tensors, rc_tensors):
             self.assertEqual(rc.get_device(), r.get_device())
             self.assertEqual(rc.type(), r.type())
+
+        # Since we have both cuda:0 and cuda:1 inputs, the outputs must be new.
+        # We can check that they have different version counters.
+        # NOTE [ Version Counter in comm.*_coalesced ]
+        versions = [t._version for t in rc_tensors]
+        for old_version, t in zip(versions, rc_tensors):
+            self.assertEqual(t._version, old_version)
+            t.zero_()
+            self.assertEqual(t._version, old_version + 1)
 
     @unittest.skipIf(not TEST_MULTIGPU, "only one GPU detected")
     @skipIfRocm
@@ -1549,6 +1582,18 @@ class TestCuda(TestCase):
     def test_gesv_batched_dims(self):
         _TestTorchMixin._test_gesv_batched_dims(self, lambda t: t.cuda())
 
+    @unittest.skipIf(not TEST_MAGMA, "no MAGMA library detected")
+    def test_potrs(self):
+        _TestTorchMixin._test_potrs(self, lambda t: t.cuda())
+
+    @unittest.skipIf(not TEST_MAGMA, "no MAGMA library detected")
+    def test_potrs_batched(self):
+        _TestTorchMixin._test_potrs_batched(self, lambda t: t.cuda())
+
+    @unittest.skipIf(not TEST_MAGMA, "no MAGMA library detected")
+    def test_potrs_batched_dims(self):
+        _TestTorchMixin._test_potrs_batched_dims(self, lambda t: t.cuda())
+
     def test_view(self):
         _TestTorchMixin._test_view(self, lambda t: t.cuda())
 
@@ -1915,6 +1960,16 @@ class TestCuda(TestCase):
 
     def test_diagflat(self):
         _TestTorchMixin._test_diagflat(self, dtype=torch.float32, device='cuda')
+
+    @unittest.skipIf(not TEST_NUMPY, "NumPy not found")
+    @unittest.skipIf(not TEST_MAGMA, "no MAGMA library detected")
+    @skipIfRocm
+    def test_norm(self):
+        _TestTorchMixin._test_norm(self, device='cuda')
+
+    @skipIfRocm
+    def test_dist(self):
+        _TestTorchMixin._test_dist(self, device='cuda')
 
     @unittest.skipIf(not TEST_MAGMA, "no MAGMA library detected")
     def test_trtrs(self):
