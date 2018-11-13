@@ -367,12 +367,12 @@ struct TORCH_API Variable::Impl : public at::TensorImpl {
   const at::Storage& storage() const override;
   void* slow_data() const override;
 
-  std::shared_ptr<Function> get_grad_accumulator();
-  virtual std::shared_ptr<Function>& get_grad_fn() {
+  std::shared_ptr<Function> get_grad_accumulator();  // yf225 TODO: move to Variable class
+  virtual std::shared_ptr<Function>& get_grad_fn() {  // yf225 TODO: move to Variable class
     return get_autograd_meta()->grad_fn_;
   }
 
-  virtual const Variable& base() const {
+  virtual const Variable& base() const {  // yf225 TODO: move to Variable class
     throw std::runtime_error("Can't get base of non-view Variable");
   }
 
@@ -398,19 +398,19 @@ struct TORCH_API Variable::Impl : public at::TensorImpl {
     return get_autograd_meta()->grad_;
   }
 
-  void detach_();
+  void detach_();  // yf225 TODO: move to Variable class
 
-  void set_data(Tensor new_data);
+  void set_data(Tensor new_data);  // yf225 TODO: move to Variable class
 
   void backward(
       c10::optional<at::Tensor> gradient,
       bool keep_graph,
-      bool create_graph);
+      bool create_graph);  // yf225 TODO: move to Variable class
 
   /// Reset all expensive fields to free up resources
   void release_resources() override;
 
-  Variable::AutogradMeta* get_autograd_meta() const {
+  Variable::AutogradMeta* get_autograd_meta() const {  // yf225 TODO: move to Variable class
     return static_cast<Variable::AutogradMeta*>(data_.unsafeGetTensorImpl()->autograd_meta_);
   }
 
@@ -504,15 +504,15 @@ struct TORCH_API Variable::DifferentiableViewImpl : public Variable::Impl {
   /// Gets the up-to-date grad_fn. If the shared data or base was modified, we
   /// re-create the grad_fn to express the up-to-date view relationship between
   /// this and the base Variable.
-  std::shared_ptr<Function>& get_grad_fn() override;
+  std::shared_ptr<Function>& get_grad_fn() override;  // yf225 TODO: move to Variable class
 
-  const Variable& base() const override {
+  const Variable& base() const override {  // yf225 TODO: move to Variable class
     return static_cast<Variable::DifferentiableViewMeta*>(get_autograd_meta())->base_;
   }
 
   /// Called after in-place modifications. Modifies the grad_fn of the base
   /// Variable.
-  void rebase_history(Edge gradient_edge);
+  void rebase_history(Edge gradient_edge);  // yf225 TODO: move to Variable class
 };
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
