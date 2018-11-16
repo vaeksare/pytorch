@@ -523,16 +523,10 @@ if (BUILD_PYTHON)
 
   target_link_libraries(
       caffe2_pybind11_state caffe2_library)
-<<<<<<< HEAD
-  # BugBug if (WIN32)
-  # BugBug   target_link_libraries(caffe2_pybind11_state ${PYTHON_LIBRARIES})
-  # BugBug endif(WIN32)
-=======
   if (WIN32)
     target_link_libraries(caffe2_pybind11_state ${PYTHON_LIBRARIES})
     target_link_libraries(caffe2_pybind11_state onnx_proto)
   endif(WIN32)
->>>>>>> master
 
   # Install caffe2_pybind11_state(_gpu|hip) in site-packages/caffe2/python,
   # so it needs an rpath to find libcaffe2
