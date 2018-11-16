@@ -108,7 +108,7 @@ def wrap_nn(thnn_h_path, install_dir, template_path):
     for fn in nn_functions:
         for t in ['Float', 'Double']:
             wrapper += wrap_function(fn.name, t, fn.arguments)
-    install_dir = install_dir or 'torch/csrc/nn'
+    install_dir = install_dir or os.path.join("torch", "csrc", "nn")
     try:
         os.makedirs(install_dir)
     except OSError:
@@ -127,7 +127,7 @@ def wrap_cunn(thcunn_h_path, install_dir, template_path):
     for fn in cunn_functions:
         for t in ['CudaHalf', 'Cuda', 'CudaDouble']:
             wrapper += wrap_function(fn.name, t, fn.arguments)
-    install_dir = install_dir or 'torch/csrc/nn'
+    install_dir = install_dir or os.path.join("torch", "csrc", "nn")
     with open(os.path.join(install_dir, 'THCUNN.cwrap'), 'w') as f:
         f.write(wrapper)
     cwrap(os.path.join(install_dir, 'THCUNN.cwrap'),

@@ -4,7 +4,7 @@ import sys
 
 source_files = {'.py', '.cpp', '.h'}
 
-DECLARATIONS_PATH = 'torch/lib/tmp_install/share/ATen/Declarations.yaml'
+DECLARATIONS_PATH = os.path.join("torch", "lib", "tmp_install", "share", "ATen", "Declarations.yaml")
 
 
 # TODO: This is a little inaccurate, because it will also pick
@@ -52,9 +52,11 @@ outputs = [
 
 def generate_code_ninja(w):
     all_inputs = all_generator_source() + inputs
-    cmd = "{} {}".format(sys.executable, 'tools/setup_helpers/generate_code.py')
+    cmd = "{} {}".format(sys.executable, os.path.join("tools", "setup_helpers", "generate_code.py"))
+
     w.writer.build(
-        outputs, 'do_cmd', all_inputs,
+        [ output.replace('/', os.path.sep) for output in outputs ], 
+        'do_cmd', [ input.replace('/', os.path.sep) for input in all_inputs ],
         variables={
             'cmd': cmd,
             # Note [Unchanging results for ninja]
@@ -88,16 +90,16 @@ def generate_code(ninja_global=None,
 
     # Build THNN/THCUNN.cwrap and then THNN/THCUNN.cpp. These are primarily
     # used by the legacy NN bindings.
-    generate_nn_wrappers(nn_path, install_dir, 'tools/cwrap/plugins/templates')
+    generate_nn_wrappers(nn_path, install_dir, os.path.join("tools", "cwrap", "plugins", "templates"))
 
     # Build ATen based Variable classes
-    autograd_gen_dir = install_dir or 'torch/csrc/autograd/generated'
-    jit_gen_dir = install_dir or 'torch/csrc/jit/generated'
+    autograd_gen_dir = install_dir or os.path.join("torch", "csrc", "autograd", "generated")
+    jit_gen_dir = install_dir or os.path.join("torch", "csrc", "jit", "generated")
     for d in (autograd_gen_dir, jit_gen_dir):
         if not os.path.exists(d):
             os.makedirs(d)
-    gen_autograd(declarations_path or DECLARATIONS_PATH, autograd_gen_dir, 'tools/autograd')
-    gen_jit_dispatch(declarations_path or DECLARATIONS_PATH, jit_gen_dir, 'tools/jit/templates')
+    gen_autograd(declarations_path or DECLARATIONS_PATH, autograd_gen_dir, os.path.join("tools", "autograd"))
+    gen_jit_dispatch(declarations_path or DECLARATIONS_PATH, jit_gen_dir, os.path.join("tools", "jit", "templates"))
 
 
 def main():
@@ -107,11 +109,11 @@ def main():
     parser.add_argument('--ninja-global')
     parser.add_argument('--install_dir')
     options = parser.parse_args()
+
     generate_code(options.ninja_global,
                   options.declarations_path,
                   options.nn_path,
                   options.install_dir)
-
-
+    
 if __name__ == "__main__":
     main()
