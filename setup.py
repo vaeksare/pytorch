@@ -650,7 +650,7 @@ class build_ext(build_ext_parent):
 
         # It's an old-style class in Python 2.7...
         setuptools.command.build_ext.build_ext.run(self)
-
+        
         # Copy the essential export library to compile C++ extensions.
         if IS_WINDOWS:
             build_temp = self.build_temp
@@ -783,18 +783,30 @@ if IS_WINDOWS:
     # /NODEFAULTLIB makes sure we only link to DLL runtime
     # and matches the flags set for protobuf and ONNX
     extra_link_args = ['/NODEFAULTLIB:LIBCMT.LIB']
-    # /MD links against DLL runtime
     # and matches the flags set for protobuf and ONNX
     # /Z7 turns on symbolic debugging information in .obj files
     # /EHa is about native C++ catch support for asynchronous
     # structured exception handling (SEH)
     # /DNOMINMAX removes builtin min/max functions
     # /wdXXXX disables warning no. XXXX
-    extra_compile_args = ['/MD', '/Z7',
-                          '/EHa', '/DNOMINMAX',
+    extra_compile_args = [# BugBug '/Z7',
+                          '/Zi',
+                          # BugBug : Remove comment above if go with /EHsc '/EHa', 
+                          '/EHsc',
+                          '/DNOMINMAX',
                           '/wd4267', '/wd4251', '/wd4522', '/wd4522', '/wd4838',
                           '/wd4305', '/wd4244', '/wd4190', '/wd4101', '/wd4996',
-                          '/wd4275']
+                          '/wd4275',
+                          '/wd4273',        # inconsistent dll linkage # BugBug(testing)
+                          "/FS", # BugBug: This is bad, but don't know how to plumb /Fd for each file
+                          ]
+
+    # /MD links against DLL runtime
+    if False: # BugBug DEBUG:
+        extra_compile_args.append("/MDd")
+    else:
+        extra_compile_args.append("/MD")
+
     if sys.version_info[0] == 2:
         if not check_env_flag('FORCE_PY27_BUILD'):
             print('The support for PyTorch with Python 2.7 on Windows is very experimental.')
@@ -1083,6 +1095,7 @@ if USE_MIOPEN:
 
 if DEBUG:
     if IS_WINDOWS:
+        # BugBug extra_compile_args.append("/D_DEBUG") # BugBug
         extra_link_args.append('/DEBUG:FULL')
     else:
         extra_compile_args += ['-O0', '-g']
@@ -1100,7 +1113,6 @@ def make_relative_rpath(path):
 ################################################################################
 # Declare extensions and package
 ################################################################################
-
 extensions = []
 packages = find_packages(exclude=('tools', 'tools.*'))
 C = Extension("torch._C",
