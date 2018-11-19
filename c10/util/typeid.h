@@ -83,7 +83,14 @@ class C10_API TypeIdentifier final
   C10_API static TypeIdentifier Get();
 
  private:
+#if (defined _MSC_VER) 
+  // MSVC has problems with constexpr constructors and ODR in debug mode on older compilers. Introduce a template parameter to  
+  // work around the problem; the two versions are functionally equal. 
+  template <typename T> 
+  constexpr explicit TypeIdentifier(T id) : IdWrapper(static_cast<uint16_t>(id)) {} 
+#else
   constexpr explicit TypeIdentifier(uint16_t id) : IdWrapper(id) {}
+#endif
   friend class TypeMeta;
 };
 
