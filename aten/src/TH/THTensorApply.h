@@ -160,14 +160,19 @@
     elements_equal = 0;                                                 \
   }                                                                     \
   if (elements_equal == 0) {                                            \
-    AT_ERROR("inconsistent tensor size, expected ",                     \
-            #TENSOR1, " ", TENSOR1->sizes(), ", ",                      \
-            #TENSOR2, " ", TENSOR2->sizes(), " and ",                   \
-            #TENSOR3, " ", TENSOR3->sizes(), " to have the same "       \
-            "number of elements, but got ", TENSOR1##_n, ", ",          \
-            TENSOR2##_n, " and ", TENSOR3##_n, " elements respectively"); \
-  }                                                                     \
-                                                                        \
+    try {                                                               \
+      AT_ERROR("inconsistent tensor size, expected ",                     \
+              #TENSOR1, " ", TENSOR1->sizes(), ", ",                      \
+              #TENSOR2, " ", TENSOR2->sizes(), " and ",                   \
+              #TENSOR3, " ", TENSOR3->sizes(), " to have the same "       \
+              "number of elements, but got ", TENSOR1##_n, ", ",          \
+              TENSOR2##_n, " and ", TENSOR3##_n, " elements respectively"); \
+    }                                                                   \
+    catch(::c10::Error const &) {                                       \
+      /* Can't let a C++ exception percolate from a function declared as extern "C" */  \
+      exit(-1); /* BugBug */                                            \
+    }                                                                   \
+  }                                                                  \
   while(!TH_TENSOR_APPLY_hasFinished) \
   { \
     /* Loop through the inner most region of the Tensor */ \
@@ -197,12 +202,18 @@
   __TH_TENSOR_APPLYX_PREAMBLE(TYPE1, TENSOR1, DIM, 1) \
   __TH_TENSOR_APPLYX_PREAMBLE(TYPE2, TENSOR2, DIM, 1) \
 \
-    if(TENSOR1##_n != TENSOR2##_n) {                                    \
-      AT_ERROR("inconsistent tensor size, expected ",                   \
-      #TENSOR1, " ", TENSOR1->sizes(), " and ",                         \
-      #TENSOR2, " ", TENSOR2->sizes(),                                  \
-      " to have the same number of elements, but got ",                 \
-      TENSOR1##_n, " and ", TENSOR2##_n, " elements respectively");     \
+if(TENSOR1##_n != TENSOR2##_n) {                                    \
+      try {                                                             \
+        AT_ERROR("inconsistent tensor size, expected ",                 \
+        #TENSOR1, " ", TENSOR1->sizes(), " and ",                       \
+        #TENSOR2, " ", TENSOR2->sizes(),                                \
+        " to have the same number of elements, but got ",               \
+        TENSOR1##_n, " and ", TENSOR2##_n, " elements respectively");   \
+      }                                                                 \
+      catch(::c10::Error const &) {                                     \
+        /* Can't let a C++ exception percolate from a function declared as extern "C" */  \
+        exit(-1); /* BugBug */                                          \
+      }                                                                 \
     }                                                                   \
   while(!TH_TENSOR_APPLY_hasFinished) \
   { \
@@ -247,10 +258,13 @@
 
 #ifdef _OPENMP
 
-#ifndef _WIN32
-#define PRAGMA(P) _Pragma(#P)
+#if (defined _WIN32) 
+// MSVC doesing support loop pragmas, but does support others. Create a new macro to account for those differences. 
+#define PRAGMA_LOOP(P)    // Noop 
+#define PRAGMA(P)         __pragma(P)
 #else
-#define PRAGMA(P) __pragma(P)
+#define PRAGMA_LOOP(P)    _Pragma(#P) 
+#define PRAGMA(P)         _Pragma(#P)
 #endif
 
 #include <omp.h>
@@ -377,7 +391,7 @@
         CODE                                                            \
       }\
     } else {\
-      PRAGMA(simd) \
+      PRAGMA_LOOP(simd) \
       PRAGMA( omp parallel for if (SIZE > OMP_THRESHOLD * 10) firstprivate(rp, tp) )  \
       for (iter = 0; iter < SIZE; iter++) {\
         TYPE2* TENSOR2##_data = tp+iter;\
@@ -449,7 +463,7 @@
     TYPE3 *srcp = THTensor_getStoragePtr(TENSOR3)->data<TYPE3>()+TENSOR3->storage_offset();                               \
     ptrdiff_t iter = 0;\
     if(tp != (TYPE2*)rp) {                                                                             \
-      PRAGMA(ivdep) \
+      PRAGMA_LOOP(ivdep) \
       PRAGMA( omp parallel for if (SIZE > OMP_THRESHOLD * 10) )  \
       for (iter = 0; iter < SIZE; iter++) {\
         TYPE1 *TENSOR1##_data = rp+iter;\
@@ -458,7 +472,7 @@
         CODE                                \
       } \
     } else {\
-      PRAGMA(simd) \
+      PRAGMA_LOOP(simd) \
       PRAGMA( omp parallel for if (SIZE > OMP_THRESHOLD * 10) )  \
       for (iter = 0; iter < SIZE; iter++) {\
         TYPE1 *TENSOR1##_data = rp+iter;\
