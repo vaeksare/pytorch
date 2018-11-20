@@ -293,6 +293,7 @@ if(MSVC)
     /wd4101
     /wd4996
     /wd4275
+    /wd4273
     /bigobj
     )
 else()

@@ -392,15 +392,16 @@ struct ApplyGridSample<scalar_t, 2, GridSamplerInterpolation::Bilinear, padding>
                                 : (i_x_e > iVec(-1)) & (i_x_e < iVec(inp_W));
     auto s_mask = must_in_bound ? (i_y_s < iVec(inp_H))
                                 : (i_y_s > iVec(-1)) & (i_y_s < iVec(inp_H));
-    auto nw_mask = cast<scalar_t>(must_in_bound ? iVec(-1) : (w_mask & n_mask));
-    auto ne_mask = cast<scalar_t>(e_mask & n_mask);
-    auto sw_mask = cast<scalar_t>(w_mask & s_mask);
-    auto se_mask = cast<scalar_t>(e_mask & s_mask);
+    auto nw_mask = must_in_bound ? iVec(-1) // true = all ones 
+                                 : (w_mask & n_mask); 
+    auto ne_mask = e_mask & n_mask; 
+    auto sw_mask = w_mask & s_mask; 
+    auto se_mask = e_mask & s_mask;
 
     return std::make_tuple(
       n, s, w, e,
       nw, ne, sw, se,
-      nw_mask, ne_mask, sw_mask, se_mask,
+      cast<scalar_t>(nw_mask), cast<scalar_t>(ne_mask), cast<scalar_t>(sw_mask), cast<scalar_t>(se_mask),
       i_y_n, i_x_w);
   }
 
